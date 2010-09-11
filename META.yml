@@ -1,0 +1,27 @@
+--- #YAML:1.0
+name:               Net-RabbitMQ-Simple
+version:            0.0002
+abstract:           Simple way for librabbitmq
+author:  []
+license:            perl
+distribution_type:  module
+configure_requires:
+    ExtUtils::MakeMaker:  0
+build_requires:
+    ExtUtils::MakeMaker:  0
+requires:
+    ExtUtils::Install:    1.46
+    ExtUtils::MakeMaker:  6.31
+    Module::Build:        0.36
+    Moose:                1.05
+    MooseX::LazyRequire:  0.06
+    namespace::autoclean:  0.11
+    Test::More:           0.9
+no_index:
+    directory:
+        - t
+        - inc
+generated_by:       ExtUtils::MakeMaker version 6.56
+meta-spec:
+    url:      http://module-build.sourceforge.net/META-spec-v1.4.html
+    version:  1.4

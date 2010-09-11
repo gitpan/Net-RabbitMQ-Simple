@@ -1,0 +1,15 @@
+README
+Makefile.PL
+MANIFEST
+t/001_exchange.t
+t/100_publish_get.t
+t/000_use_ok.t
+t/100_txn.t
+t/100_publish_ack_consume.t
+t/001_connect.t
+t/099_topic_publish_consume.t
+t/999_delete_exchange.t
+t/100_simple_publish_consume.t
+lib/Net/RabbitMQ/Simple.pm
+lib/Net/RabbitMQ/Simple/Wrapper.pm
+META.yml                                 Module meta-data (added by MakeMaker)
