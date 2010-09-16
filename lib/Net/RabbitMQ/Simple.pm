@@ -1,5 +1,5 @@
 package Net::RabbitMQ::Simple;
-our $VERSION = "0.0002";
+our $VERSION = "0.0003";
 
 use Moose;
 use 5.008001;
@@ -16,21 +16,21 @@ Net::RabbitMQ::Simple - A simple syntax for Net::RabbitMQ
 
 =head1 VERSION
 
-This document describes NET::RabbitMQ::Simple version 0.0002
+This document describes NET::RabbitMQ::Simple version 0.0003.
 
 =head1 SYNOPSIS
 
 
     use Net::RabbitMQ::Simple;
 
-    my $mq = mqconnect {
+    mqconnect {
         hostname => 'localhost',
         user => 'guest',
         password => 'guest',
         vhost => '/'
     };
 
-    exchange $mq, {
+    exchange {
         name => 'mtest_x',
         type => 'direct',
         passive => 0,
@@ -39,7 +39,7 @@ This document describes NET::RabbitMQ::Simple version 0.0002
         exclusive => 0
     };
 
-    publish $mq, {
+    publish {
         exchange => 'maketest',
         queue => 'mtest',
         route => 'mtest_route',
@@ -47,13 +47,15 @@ This document describes NET::RabbitMQ::Simple version 0.0002
         options => { content_type => 'text/plain' }
     };
 
-    consume $mq;
-    my $rv = $mq->recv();
-    
+    my $rv = consume;
+
+    # or
+    # my $rv = get { options => { routing_key => 'foo.*' }}
+
     # use Data::Dumper;
     # print Dumper($rv);
 
-    mqdisconnect $mq;
+    mqdisconnect;
 
 =head1 DESCRIPTION
 
@@ -80,18 +82,20 @@ Connect to AMQP server using librabbitmq.
 
 =cut
 
-sub mqconnect (@_) {
-    my $mq = Wrapper->new(@_);
-    $mq->connect;
-    $mq->channel(1); #TODO
-    return $mq;
+our $_mq;
+
+sub mqconnect (@) {
+    $_mq = Wrapper->new(@_);
+    $_mq->connect;
+    $_mq->channel(1); #TODO
+    return $_mq;
 }
 
 =head2 exchange
 
 Declare an exchange for work.
 
-    exchange $mq, {
+    exchange {
         name => 'name_of_exchange',
         exchange_type => 'direct',
         passive => 0,
@@ -101,21 +105,20 @@ Declare an exchange for work.
 
 =cut
 
-sub exchange (@_) {
-    my ($mq, $opt) = @_;
-    
+sub exchange (@) {
+    my ($opt) = @_;
     my $exchange = $opt->{name};
     Carp::confess("please give the exchange name") if !$exchange;
     delete $opt->{name};
 
-    $mq->exchange_declare($exchange, %{$opt});
+    $_mq->exchange_declare($exchange, %{$opt});
 }
 
 =head2 exchange_delete
 
 Delete an exchange if is possible.
 
-    exchange_delete $mq, {
+    exchange_delete {
         name => 'name_of_exchange',
         if_unused => 1,
         nowait => 0
@@ -123,20 +126,20 @@ Delete an exchange if is possible.
 
 =cut
 
-sub exchange_delete (@_) {
-    my ($mq, $opt) = @_;
+sub exchange_delete (@) {
+    my ($opt) = @_;
     
     my $exchange = $opt->{name};
     Carp::confess("please give the exchange name") if !$exchange;
     delete $opt->{name};
 
-    $mq->exchange_delete($exchange, %{$opt});
+    $_mq->exchange_delete($exchange, %{$opt});
 }
 =head2 exchange_publish
 
 Publish a new message.
 
-    publish $mq, {
+    publish {
         exchange => 'exchange',
         queue => 'queue',
         route => 'route',
@@ -146,70 +149,71 @@ Publish a new message.
 
 =cut
 
-sub publish (@_) {
-    my ($mq, $opt) = @_;
+sub publish (@) {
+    my ($opt) = @_;
    
-    $mq->exchange_name($opt->{exchange}) if $opt->{exchange};
+    $_mq->exchange_name($opt->{exchange}) if $opt->{exchange};
 
-    $mq->queue_declare($opt->{queue}, %{$opt->{queue_options}});
-    $mq->queue_bind($opt->{route});
+    $_mq->queue_declare($opt->{queue}, %{$opt->{queue_options}});
+    $_mq->queue_bind($opt->{route});
 
-    map { $mq->$_($opt->{$_}) if defined($opt->{$_}) }
+    map { $_mq->$_($opt->{$_}) if defined($opt->{$_}) }
         qw/mandatory immediate/;
     
     # ACKs
-    $mq->purge($mq->queue_name) if defined($opt->{ack}) and $opt->{ack} == 1;
+    $_mq->purge($_mq->queue_name) 
+        if defined($opt->{ack}) and $opt->{ack} == 1;
 
-    $mq->publish($opt->{message}, %{$opt->{options}});
+    $_mq->publish($opt->{message}, %{$opt->{options}});
 }
 
 =head2 consume
 
 Consume messages from queue.
 
-    consume $mq, {
+    consume {
         queue => 'name'
     };
 
 =cut
 
-sub consume (@_) {
-    my ($mq, $opt) = @_;
-    $mq->no_ack(0) if defined($opt->{ack}) and $opt->{ack} == 1;
-    $mq->exchange_name($opt->{exchange}) if defined($opt->{exchange});
-    $mq->queue_declare($opt->{queue}) if defined($opt->{queue});
+sub consume (@) {
+    my ($opt) = @_;
+    $_mq->no_ack(0) if defined($opt->{ack}) and $opt->{ack} == 1;
+    $_mq->exchange_name($opt->{exchange}) if defined($opt->{exchange});
+    $_mq->queue_declare($opt->{queue}) if defined($opt->{queue});
 
-    $mq->consume($opt->{options} || ());
-    $mq->recv();
+    $_mq->consume($opt->{options} || ());
+    $_mq->recv();
 }
 
 =head2 get
 
 Consume messages from queue, but return undef if doesn't have message.
 
-    get $mq, {
+    get {
         queue => 'queue',
         options => { routing_key => 'foo' }
     };
 
 =cut
 
-sub get (@_) {
-    my ($mq, $opt) = @_;
-    $mq->no_ack(0) if defined($opt->{ack}) and $opt->{ack} == 1;
-    $mq->exchange_name($opt->{exchange}) if defined($opt->{exchange});
-    $mq->queue_declare($opt->{queue}) if defined($opt->{queue});
+sub get (@) {
+    my ($opt) = @_;
+    $_mq->no_ack(0) if defined($opt->{ack}) and $opt->{ack} == 1;
+    $_mq->exchange_name($opt->{exchange}) if defined($opt->{exchange});
+    $_mq->queue_declare($opt->{queue}) if defined($opt->{queue});
 
-    $mq->get($opt->{options} ? %{$opt->{options}} : ());
+    $_mq->get($opt->{options} ? %{$opt->{options}} : ());
 }
 
-sub tx (@_) { shift->tx(); }
-sub commit (@_) { shift->commit(); }
-sub rollback (@_) { shift->rollback(); }
+sub tx (@) { $_mq->tx(); }
+sub commit (@) { $_mq->commit(); }
+sub rollback (@) { $_mq->rollback(); }
 
-sub purge (@_) { shift->purge(@_) }
-sub ack (@_) { shift->ack(@_) }
-sub mqdisconnect(@_) { shift->disconnect(@_) }
+sub purge (@) { $_mq->purge(@_) }
+sub ack (@) { $_mq->ack(@_) }
+sub mqdisconnect(@) { $_mq->disconnect(@_) }
 
 sub import {
     my $class = shift;
@@ -239,6 +243,15 @@ sub parser {
     my $proto = $self->strip_proto;
     
     # TODO
+#    my ($mq, $opt);
+
+#    if (ref($_[1]) eq 'HASH') {
+#       ($mq, $opt) = @_;
+#    } else {
+#       $mq = $_mq;
+#       ($opt) = @_;
+#    }
+
 
     return;
 }
