@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-RabbitMQ-Simple
-version:            0.0004
+version:            0.0005
 abstract:           Simple way for RabbitMQ lib
 author:
     - Thiago Berlitz Rondon <tbr@cpan.org>
