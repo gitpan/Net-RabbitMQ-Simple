@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Net-RabbitMQ-Simple
-version:            0.0006
+version:            0.0007
 abstract:           Simple way for RabbitMQ lib
 author:
     - Thiago Berlitz Rondon <tbr@cpan.org>
@@ -20,6 +20,7 @@ requires:
     MooseX::Method::Signatures:  0.36
     namespace::autoclean:  0.11
     Net::RabbitMQ:        0.1
+    Test::LeakTrace:      0.13
     Test::More:           0.9
 no_index:
     directory:
